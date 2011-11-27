@@ -35,3 +35,15 @@ if __name__ == "__main__":
 		print("Usage: %s n1 [n2 n3...]" % sys.argv[0], file = sys.stderr)
 		exit(1)
 	main(sys.argv[1:])
+
+
+
+
+
+
+########################################################################
+ESC   = "\033["
+COLOR = "31m"
+
+BLACK = "0m"
+STOP  = ESC + BLACK
