@@ -4,7 +4,8 @@
 #include <wchar.h>
 
 const char   *program_name;
-const wchar_t bar_characters[] = L" ▁▂▃▄▅▆▇";
+const wchar_t bar_chars[]  = L" ▁▂▃▄▅▆▇";
+const char    bar_chars2[] =  " ▁▂▃▄▅▆▇";
 
 void error(const char *msg)
 {
@@ -20,8 +21,11 @@ void die(const char *msg, int status)
 /*******************************************************************/
 void test(void)
 {
-	printf("wcslen(bar_characters) = %zi\n", wcslen(bar_characters));
-	printf("bar_characters = %ls\n", bar_characters);
+	printf("wcslen(bar_chars) = %zi\n", wcslen(bar_chars));
+	printf("bar_chars = %ls\n", bar_chars);
+	printf("\n");
+	printf("mbstowcs(bar_chars2) = %zi\n", mbstowcs(NULL, bar_chars2, 0));
+	printf("bar_chars2 = %s\n", bar_chars2);
 }
 /*******************************************************************/
 
