@@ -8,7 +8,10 @@ import Foreign.C
 
 type Sysconf = Int
 
+scClkTck          :: Int
 scClkTck          = #const _SC_CLK_TCK
+
+scNprocessorsOnln :: Int
 scNprocessorsOnln = #const _SC_NPROCESSORS_ONLN
 
 foreign import ccall unsafe "unistd.h sysconf" c_sysconf :: CInt -> IO CLong
