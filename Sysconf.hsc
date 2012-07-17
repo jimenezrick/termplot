@@ -4,9 +4,16 @@ module Sysconf where
 
 import Foreign.C
 
+#include <unistd.h>
+
+type Sysconf = Int
+
+scClkTck          = #const _SC_CLK_TCK
+scNprocessorsOnln = #const _SC_NPROCESSORS_ONLN
+
 foreign import ccall unsafe "unistd.h sysconf" c_sysconf :: CInt -> IO CLong
 
-sysconf :: Int -> IO Integer
+sysconf :: Sysconf -> IO Integer
 sysconf x = do
     resetErrno
     r <- c_sysconf $ fromIntegral x
