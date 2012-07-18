@@ -1,25 +1,28 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 
-module Sysconf where
+module Sysconf (
+    Sysconf(..)
+  , sysconf
+) where
 
 import Foreign.C
 
 #include <unistd.h>
 
-type Sysconf = Int
+data Sysconf = ClkTck
+             | NprocessorsOnln
 
-scClkTck          :: Int
-scClkTck          = #const _SC_CLK_TCK
-
-scNprocessorsOnln :: Int
-scNprocessorsOnln = #const _SC_NPROCESSORS_ONLN
+getConst :: Sysconf -> CInt
+getConst x = case x of
+               ClkTck          -> #const _SC_CLK_TCK
+               NprocessorsOnln -> #const _SC_NPROCESSORS_ONLN
 
 foreign import ccall unsafe "unistd.h sysconf" c_sysconf :: CInt -> IO CLong
 
 sysconf :: Sysconf -> IO Integer
 sysconf x = do
     resetErrno
-    r <- c_sysconf $ fromIntegral x
+    r <- c_sysconf $ getConst x
     case fromIntegral r of
       -1 -> do
           errno <- getErrno
