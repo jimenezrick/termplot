@@ -11,11 +11,11 @@ import Foreign.C
 
 data Sysconf = ClkTck
              | NprocessorsOnln
+             deriving (Eq, Show)
 
 getConst :: Sysconf -> CInt
-getConst x = case x of
-               ClkTck          -> #const _SC_CLK_TCK
-               NprocessorsOnln -> #const _SC_NPROCESSORS_ONLN
+getConst ClkTck          = #const _SC_CLK_TCK
+getConst NprocessorsOnln = #const _SC_NPROCESSORS_ONLN
 
 foreign import ccall unsafe "unistd.h sysconf" c_sysconf :: CInt -> IO CLong
 
