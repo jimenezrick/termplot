@@ -10,8 +10,9 @@ main :: IO ()
 main = do
     args <- getArgs
     case args of
+      []           -> usage
       ["-h"]       -> usage
-      ["-p", pipe] -> runUi pipe
+      ["-p", pipe] -> withFile pipe ReadMode runUi
       _            -> do
           let seq = map read $ concat $ map (splitOn ",") args :: [Double]
           putStrLn $ getBars seq
@@ -19,7 +20,7 @@ main = do
 usage :: IO ()
 usage = do
     prog <- getProgName
-    hPutStrLn stderr $ "Usage: " ++ prog ++ " -h | <sequence>"
+    hPutStrLn stderr $ "Usage: " ++ prog ++ " -h | -p <pipe> | <sequence>"
     exitFailure
 
 bars :: String
@@ -39,10 +40,49 @@ getBars l = map (getBar (minimum l) (maximum l)) l
 
 
 
-runUi :: FilePath -> IO ()
-runUi f = do
-    handle <- openFile f ReadMode
+
+
+newtype BarLine = BarLine (String, [Double])
+
+nameBarLines :: [String] -> [BarLine]
+nameBarLines = map (\n -> BarLine (n, []))
+
+maxSavedValues :: Int
+maxSavedValues = 1024
+
+addValue :: Int -> BarLine -> BarLine
+addValue v (BarLine s vs) | length vs > maxSavedValues = BarLine s v:(init vs)
+                          | otherwise                  = BarLine s v:vs
+
+
+
+
+
+
+
+
+
+
+
+
+updateBarLines :: Vty -> [BarLine] -> IO ()
+updateBarLines vty bls = do
+    DisplayRegion w h <- display_bounds $ terminal vty
+
+
+
+
+{-updateUi :: Vty -> IO ()-}
+{-updateUi vty =-}
+
+
+
+
+
+
+runUi :: Handle -> IO ()
+runUi h = do
     vty <- mkVty
-    cont <- hGetContents handle
+    cont <- hGetContents h
     mapM_ (\c -> update vty $ pic_for_image $ string def_attr [getBar 0 10 (read c :: Double)]) (lines cont)
     shutdown vty
