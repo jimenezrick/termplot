@@ -42,17 +42,19 @@ getBars l = map (getBar (minimum l) (maximum l)) l
 
 
 
+
+
 newtype BarLine = BarLine (String, [Double])
 
-nameBarLines :: [String] -> [BarLine]
-nameBarLines = map (\n -> BarLine (n, []))
+newBarLine :: String -> BarLine
+newBarLine n = BarLine (n, [])
 
-maxSavedValues :: Int
-maxSavedValues = 1024
+maxBarVals :: Int
+maxBarVals = 1024
 
-addValue :: Int -> BarLine -> BarLine
-addValue v (BarLine s vs) | length vs > maxSavedValues = BarLine s v:(init vs)
-                          | otherwise                  = BarLine s v:vs
+addValBar :: Int -> BarLine -> BarLine
+addValBar v (BarLine (n, vs)) | length vs == maxBarVals = BarLine n v:(init vs)
+                              | otherwise               = BarLine n v:vs
 
 
 
