@@ -1,8 +1,9 @@
-module Main where
+module Main (main) where
 
 import System.IO
 import System.Exit
 import System.Environment
+import Control.Exception
 import Data.List.Split
 import Graphics.Vty
 
@@ -14,8 +15,8 @@ main = do
       ["-h"]       -> usage
       ["-p", pipe] -> withFile pipe ReadMode runUi
       _            -> do
-          let seq = map read $ concat $ map (splitOn ",") args :: [Double]
-          putStrLn $ getBars seq
+          let seq' = map read $ concatMap (splitOn ",") args :: [Double]
+          putStrLn $ getBars seq'
 
 usage :: IO ()
 usage = do
@@ -23,15 +24,15 @@ usage = do
     hPutStrLn stderr $ "Usage: " ++ prog ++ " -h | -p <pipe> | <sequence>"
     exitFailure
 
-bars :: String
-bars = " ▁▂▃▄▅▆▇█"
+barChars :: String
+barChars = " ▁▂▃▄▅▆▇█"
 
 getBar :: Double -> Double -> Double -> Char
-getBar min max n =
-    let len = fromIntegral $ length bars
-        wid = (max - min) / (len - 1)
-        idx = round $ (n - min) / wid
-    in bars !! idx
+getBar min' max' n =
+    let len = fromIntegral $ length barChars
+        wid = (max' - min') / (len - 1)
+        idx = round $ (n - min') / wid
+    in barChars !! idx
 
 getBars :: [Double] -> String
 getBars l = map (getBar (minimum l) (maximum l)) l
@@ -52,9 +53,9 @@ newBarLine n = BarLine (n, [])
 maxBarVals :: Int
 maxBarVals = 1024
 
-addValBar :: Int -> BarLine -> BarLine
-addValBar v (BarLine (n, vs)) | length vs == maxBarVals = BarLine n v:(init vs)
-                              | otherwise               = BarLine n v:vs
+addValBar :: Double -> BarLine -> BarLine
+addValBar v (BarLine (n, vs)) | length vs == maxBarVals = BarLine (n, v:init vs)
+                              | otherwise               = BarLine (n, v:vs)
 
 
 
@@ -67,9 +68,9 @@ addValBar v (BarLine (n, vs)) | length vs == maxBarVals = BarLine n v:(init vs)
 
 
 
-updateBarLines :: Vty -> [BarLine] -> IO ()
-updateBarLines vty bls = do
-    DisplayRegion w h <- display_bounds $ terminal vty
+{-updateBarLines :: Vty -> [BarLine] -> IO ()-}
+{-updateBarLines vty bls = do-}
+    {-DisplayRegion w h <- display_bounds $ terminal vty-}
 
 
 
@@ -79,12 +80,38 @@ updateBarLines vty bls = do
 
 
 
-
-
-
 runUi :: Handle -> IO ()
-runUi h = do
-    vty <- mkVty
-    cont <- hGetContents h
-    mapM_ (\c -> update vty $ pic_for_image $ string def_attr [getBar 0 10 (read c :: Double)]) (lines cont)
-    shutdown vty
+runUi hdl = bracket mkVty shutdown $ runUi' hdl
+
+runUi' :: Handle -> Vty -> IO ()
+runUi' hdl vty = do
+    bars <- fmap (map newBarLine) (readBarNames hdl)
+
+
+
+
+
+
+
+
+
+    {-cont <- hGetContents hdl-}
+    {-mapM_ (\c -> update vty $ pic_for_image $ string def_attr [getBar 0 10 (read c :: Double)]) (lines cont)-}
+
+
+
+
+
+
+readBarNames :: Handle -> IO [String]
+readBarNames hdl = (hGetLine hdl) >>= (return . (splitOn ","))
+
+
+
+composeBar :: BarLine -> Image
+composeBar BarLine (name, vals) = string def_attr name <|> string def_attr $ getBars vals
+
+
+
+
+drawBars :: [BarLine] -> IO ()
