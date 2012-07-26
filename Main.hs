@@ -3,6 +3,7 @@ module Main (main) where
 import System.IO
 import System.Exit
 import System.Environment
+import Control.Monad
 import Control.Exception
 import Data.List.Split
 import Graphics.Vty
@@ -52,6 +53,9 @@ addValBar v (BarLine (n, vs)) | length vs == maxBarVals = BarLine (n, v:init vs)
 readBarNames :: Handle -> IO [String]
 readBarNames hdl = (hGetLine hdl) >>= (return . (splitOn ","))
 
+readBarsVal :: Handle -> IO [Double]
+readBarsVal = liftM (map read) . readBarNames
+
 composeBar :: BarLine -> Image
 composeBar (BarLine (name, vals)) = string def_attr name <|> string def_attr (getBars vals)
 
@@ -61,7 +65,16 @@ runUi hdl = bracket mkVty shutdown $ runUi' hdl
 runUi' :: Handle -> Vty -> IO ()
 runUi' hdl vty = do
     bars <- fmap (map newBarLine) (readBarNames hdl)
-    cont <- hGetContents hdl
+    vals <- sequence $ repeat $ readBarsVal hdl
+
+
+
+    {-uncurry updateUi-}
+
+
+
+
+    -- XXX HLint
 
 
     return ()
@@ -69,12 +82,11 @@ runUi' hdl vty = do
 
 
 
-    {-mapM_ (\c -> update vty $ pic_for_image $ string def_attr [getBar 0 10 (read c :: Double)]) (lines cont)-}
 
 
 
-
-
-
-
-{-drawBars :: [BarLine] -> IO ()-}
+updateUi :: Vty -> [BarLine] -> IO ()
+updateUi vty bls = update vty pic
+    where pic = pic_for_image img
+          img = foldr (\b i -> b <|> i) empty_image bls'
+          bls' = map composeBar bls
