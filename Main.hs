@@ -60,24 +60,28 @@ composeChartImg :: BarChart -> Image
 composeChartImg (BarChart (name, vals)) =
     string def_attr name <|> string def_attr (getBars vals)
 
+updateUi :: Vty -> [BarChart] -> [Double] -> IO ()
+updateUi vty bcs vs = do
+    let bcs' = zipWith addValChart vs bcs
+    drawChart vty bcs'
+
+drawChart :: Vty -> [BarChart] -> IO ()
+drawChart vty bcs = update vty pic
+    where bcs' = map composeChartImg bcs
+          img = foldr (<->) empty_image bcs'
+          pic = pic_for_image img
+
 runUi :: Handle -> IO ()
 runUi hdl = bracket mkVty shutdown $ runUi' hdl
 
 runUi' :: Handle -> Vty -> IO ()
 runUi' hdl vty = do
-    bars <- fmap (map newBarChart) (readChartNames hdl)
-    drawChart vty bars
-    vals <- sequence $ repeat $ readChartVals hdl
-    foldM_ (updateUi vty) bars vals
+    charts <- fmap (map newBarChart) (readChartNames hdl)
+    drawChart vty charts
+    runUi'' hdl vty charts
 
-updateUi :: Vty -> [BarChart] -> [Double] -> IO [BarChart]
-updateUi vty bls vs = do
-    let bls' = zipWith addValChart vs bls
-    drawChart vty bls'
-    return bls'
-
-drawChart :: Vty -> [BarChart] -> IO ()
-drawChart vty bls = update vty pic
-    where bls' = map composeChartImg bls
-          img = foldr (<->) empty_image bls'
-          pic = pic_for_image img
+runUi'' :: Handle -> Vty -> [BarChart] -> IO ()
+runUi'' hdl vty bcs = do
+    vals <- readChartVals hdl
+    updateUi vty bcs vals
+    runUi'' hdl vty bcs
