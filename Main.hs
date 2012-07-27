@@ -14,7 +14,7 @@ main = do
     case args of
       []           -> usage
       ["-h"]       -> usage
-      ["-p", pipe] -> withFile pipe ReadMode runUi
+      ["-f", pipe] -> withFile pipe ReadMode runUi
       _            -> do
           let seq' = map read $ concatMap (splitOn ",") args :: [Double]
           putStrLn $ getBars seq'
@@ -22,7 +22,7 @@ main = do
 usage :: IO ()
 usage = do
     prog <- getProgName
-    hPutStrLn stderr $ "Usage: " ++ prog ++ " -h | -p <pipe> | <sequence>"
+    hPutStrLn stderr $ "Usage: " ++ prog ++ " -h | -f <fifo> | <sequence>"
     exitFailure
 
 barChars :: String
@@ -38,55 +38,46 @@ getBar min' max' n =
 getBars :: [Double] -> String
 getBars l = map (getBar (minimum l) (maximum l)) l
 
-newtype BarLine = BarLine (String, [Double])
+newtype BarChart = BarChart (String, [Double])
 
-newBarLine :: String -> BarLine
-newBarLine n = BarLine (n, [])
+newBarChart :: String -> BarChart
+newBarChart n = BarChart (n, [])
 
-maxBarVals :: Int
-maxBarVals = 1024
+maxChartVals :: Int
+maxChartVals = 1024
 
-addValBar :: Double -> BarLine -> BarLine
-addValBar v (BarLine (n, vs)) | length vs == maxBarVals = BarLine (n, v:init vs)
-                              | otherwise               = BarLine (n, v:vs)
+addValChart :: Double -> BarChart -> BarChart
+addValChart v (BarChart (n, vs)) | length vs == maxChartVals = BarChart (n, v:init vs)
+                                 | otherwise                 = BarChart (n, v:vs)
 
-readBarNames :: Handle -> IO [String]
-readBarNames hdl = (hGetLine hdl) >>= (return . (splitOn ","))
+readChartNames :: Handle -> IO [String]
+readChartNames hdl = liftM (splitOn ",") $ hGetLine hdl
 
-readBarsVal :: Handle -> IO [Double]
-readBarsVal = liftM (map read) . readBarNames
+readChartVals :: Handle -> IO [Double]
+readChartVals = liftM (map read) . readChartNames
 
-composeBar :: BarLine -> Image
-composeBar (BarLine (name, vals)) = string def_attr name <|> string def_attr (getBars vals)
+composeChartImg :: BarChart -> Image
+composeChartImg (BarChart (name, vals)) =
+    string def_attr name <|> string def_attr (getBars vals)
 
 runUi :: Handle -> IO ()
 runUi hdl = bracket mkVty shutdown $ runUi' hdl
 
 runUi' :: Handle -> Vty -> IO ()
 runUi' hdl vty = do
-    bars <- fmap (map newBarLine) (readBarNames hdl)
-    vals <- sequence $ repeat $ readBarsVal hdl
+    bars <- fmap (map newBarChart) (readChartNames hdl)
+    drawChart vty bars
+    vals <- sequence $ repeat $ readChartVals hdl
+    foldM_ (updateUi vty) bars vals
 
+updateUi :: Vty -> [BarChart] -> [Double] -> IO [BarChart]
+updateUi vty bls vs = do
+    let bls' = zipWith addValChart vs bls
+    drawChart vty bls'
+    return bls'
 
-
-    {-uncurry updateUi-}
-
-
-
-
-    -- XXX HLint
-
-
-    return ()
-
-
-
-
-
-
-
-updateUi :: Vty -> [BarLine] -> IO ()
-updateUi vty bls = update vty pic
-    where pic = pic_for_image img
-          img = foldr (\b i -> b <|> i) empty_image bls'
-          bls' = map composeBar bls
+drawChart :: Vty -> [BarChart] -> IO ()
+drawChart vty bls = update vty pic
+    where bls' = map composeChartImg bls
+          img = foldr (<->) empty_image bls'
+          pic = pic_for_image img
