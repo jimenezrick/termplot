@@ -60,10 +60,11 @@ composeChartImg :: BarChart -> Image
 composeChartImg (BarChart (name, vals)) =
     string def_attr name <|> string def_attr (getBars vals)
 
-updateUi :: Vty -> [BarChart] -> [Double] -> IO ()
+updateUi :: Vty -> [BarChart] -> [Double] -> IO [BarChart]
 updateUi vty bcs vs = do
     let bcs' = zipWith addValChart vs bcs
     drawChart vty bcs'
+    return bcs'
 
 drawChart :: Vty -> [BarChart] -> IO ()
 drawChart vty bcs = update vty pic
@@ -83,5 +84,5 @@ runUi' hdl vty = do
 runUi'' :: Handle -> Vty -> [BarChart] -> IO ()
 runUi'' hdl vty bcs = do
     vals <- readChartVals hdl
-    updateUi vty bcs vals
-    runUi'' hdl vty bcs
+    bcs' <- updateUi vty bcs vals
+    runUi'' hdl vty bcs'
