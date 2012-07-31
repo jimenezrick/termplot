@@ -7,13 +7,12 @@ import Control.Monad
 import Control.Exception
 import Control.Concurrent
 import Data.List.Split
-import Graphics.Vty
+import Graphics.Vty hiding (pad)
 
 {-
- - TODO: Catch EOF
+ - TODO: Catch EOF and read error
  -       CPU chart
  -       Haskell project structure
- -       Row name padding
  -}
 
 main :: IO ()
@@ -69,14 +68,24 @@ composeChartImg :: BarChart -> Image
 composeChartImg (BarChart (name, vals)) =
     string def_attr name <|> string def_attr (getBars vals)
 
+padChartNames :: [BarChart] -> [BarChart]
+padChartNames cs = map (\(BarChart (s, vs)) -> BarChart (pad s, vs)) cs
+    where len   = maximum $ map (\(BarChart (s, _)) -> length s) cs
+          pad s = s ++ replicate (len - length s + 1) ' '
+
+tryLogScale :: BarChart -> BarChart
+tryLogScale b@(BarChart (s, vs))
+    | all (> 0) vs = BarChart (s, map (logBase 10) vs)
+    | otherwise   = b
+
 drawChart :: Vty -> [BarChart] -> IO ()
 drawChart vty cs = update vty pic
-    where cs' = map composeChartImg cs
+    where cs' = map (composeChartImg . tryLogScale) $ padChartNames cs
           img = foldr (<->) empty_image cs'
           pic = pic_for_image img
 
 runUi :: Handle -> IO ()
-runUi hdl = bracket mkVty shutdown $ runUi'
+runUi hdl = bracket mkVty shutdown runUi'
     where runUi' vty = do
             mvar <- newEmptyMVar
             t1 <- forkIO (inputReader vty mvar)
