@@ -11,7 +11,6 @@ import Graphics.Vty
 
 {-
  - TODO: Terminate on EOF and Ctrl-C
- -       Second thread for reading
  -       CPU chart
  -       Haskell project structure
  -       Row name padding
@@ -56,8 +55,9 @@ maxChartVals :: Int
 maxChartVals = 1024
 
 addValChart :: Double -> BarChart -> BarChart
-addValChart v (BarChart (n, vs)) | length vs == maxChartVals = BarChart (n, v:init vs)
-                                 | otherwise                 = BarChart (n, v:vs)
+addValChart v (BarChart (n, vs))
+    | length vs == maxChartVals = BarChart (n, v:init vs)
+    | otherwise                 = BarChart (n, v:vs)
 
 readChartNames :: Handle -> IO [String]
 readChartNames hdl = liftM (splitOn ",") $ hGetLine hdl
@@ -69,41 +69,41 @@ composeChartImg :: BarChart -> Image
 composeChartImg (BarChart (name, vals)) =
     string def_attr name <|> string def_attr (getBars vals)
 
-updateUi :: Vty -> [BarChart] -> [Double] -> IO [BarChart]
-updateUi vty bcs vs = do
-    let bcs' = zipWith addValChart vs bcs
-    drawChart vty bcs'
-    return bcs'
-
 drawChart :: Vty -> [BarChart] -> IO ()
-drawChart vty bcs = update vty pic
-    where bcs' = map composeChartImg bcs
-          img = foldr (<->) empty_image bcs'
+drawChart vty cs = update vty pic
+    where cs' = map composeChartImg cs
+          img = foldr (<->) empty_image cs'
           pic = pic_for_image img
 
 runUi :: Handle -> IO ()
-runUi hdl = bracket mkVty shutdown $ runUi' hdl
+runUi hdl = bracket mkVty shutdown $ runUi'
+    where runUi' vty = do
+            mvar <- newEmptyMVar
+            _ <- forkIO (inputReader vty mvar)
+            _ <- forkIO (fifoReader mvar hdl)
+            runUi'' vty mvar
+          runUi'' vty mvar = do
+            var <- takeMVar mvar
+            case var of
+              Nothing -> return ()
+              Just cs -> do
+                  drawChart vty cs
+                  runUi'' vty mvar
 
-runUi' :: Handle -> Vty -> IO ()
-runUi' hdl vty = do
-    -- XXX XXX XXX
-    mvar <- newEmptyMVar
-    _ <- forkIO (inputReader vty mvar)
-    -- XXX XXX XXX
-    charts <- fmap (map newBarChart) (readChartNames hdl)
-    drawChart vty charts
-    runUi'' hdl vty charts
-
-runUi'' :: Handle -> Vty -> [BarChart] -> IO ()
-runUi'' hdl vty bcs = do
-    vals <- readChartVals hdl
-    bcs' <- updateUi vty bcs vals
-    runUi'' hdl vty bcs'
-
-inputReader :: Vty -> MVar () -> IO ()
+inputReader :: Vty -> MVar (Maybe a) -> IO ()
 inputReader vty mvar = do
     ev <- next_event vty
     case ev of
-      EvKey (KASCII 'c') [MCtrl] -> putMVar mvar ()
-      _                          -> return ()
-    inputReader vty mvar
+      EvKey (KASCII 'c') [MCtrl] -> putMVar mvar Nothing
+      _                          -> inputReader vty mvar
+
+fifoReader :: MVar (Maybe [BarChart]) -> Handle -> IO ()
+fifoReader mvar hdl = do
+    charts <- fmap (map newBarChart) (readChartNames hdl)
+    putMVar mvar $ Just charts
+    loop charts
+        where loop cs = do
+                vs <- readChartVals hdl
+                let cs' = zipWith addValChart vs cs
+                putMVar mvar $ Just cs'
+                loop cs'
