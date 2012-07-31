@@ -2,5 +2,5 @@
 
 all: termplot
 
-termplot: Main.hs
-	ghc -Wall -o termplot --make Main
+termplot: src/Main.hs
+	ghc -Wall -threaded -o termplot --make src/Main.hs

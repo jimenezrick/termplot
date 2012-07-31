@@ -10,7 +10,7 @@ import Data.List.Split
 import Graphics.Vty
 
 {-
- - TODO: Terminate on EOF and Ctrl-C
+ - TODO: Catch EOF
  -       CPU chart
  -       Haskell project structure
  -       Row name padding
@@ -79,16 +79,19 @@ runUi :: Handle -> IO ()
 runUi hdl = bracket mkVty shutdown $ runUi'
     where runUi' vty = do
             mvar <- newEmptyMVar
-            _ <- forkIO (inputReader vty mvar)
-            _ <- forkIO (fifoReader mvar hdl)
-            runUi'' vty mvar
-          runUi'' vty mvar = do
+            t1 <- forkIO (inputReader vty mvar)
+            t2 <- forkIO (fifoReader mvar hdl)
+            runUi'' vty mvar t1 t2
+          runUi'' vty mvar t1 t2 = do
             var <- takeMVar mvar
             case var of
-              Nothing -> return ()
+              Nothing -> do
+                  killThread t1
+                  killThread t2
+                  exitSuccess
               Just cs -> do
                   drawChart vty cs
-                  runUi'' vty mvar
+                  runUi'' vty mvar t1 t2
 
 inputReader :: Vty -> MVar (Maybe a) -> IO ()
 inputReader vty mvar = do
