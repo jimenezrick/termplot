@@ -5,8 +5,17 @@ import System.Exit
 import System.Environment
 import Control.Monad
 import Control.Exception
+import Control.Concurrent
 import Data.List.Split
 import Graphics.Vty
+
+{-
+ - TODO: Terminate on EOF and Ctrl-C
+ -       Second thread for reading
+ -       CPU chart
+ -       Haskell project structure
+ -       Row name padding
+ -}
 
 main :: IO ()
 main = do
@@ -77,6 +86,10 @@ runUi hdl = bracket mkVty shutdown $ runUi' hdl
 
 runUi' :: Handle -> Vty -> IO ()
 runUi' hdl vty = do
+    -- XXX XXX XXX
+    mvar <- newEmptyMVar
+    _ <- forkIO (inputReader vty mvar)
+    -- XXX XXX XXX
     charts <- fmap (map newBarChart) (readChartNames hdl)
     drawChart vty charts
     runUi'' hdl vty charts
@@ -86,3 +99,11 @@ runUi'' hdl vty bcs = do
     vals <- readChartVals hdl
     bcs' <- updateUi vty bcs vals
     runUi'' hdl vty bcs'
+
+inputReader :: Vty -> MVar () -> IO ()
+inputReader vty mvar = do
+    ev <- next_event vty
+    case ev of
+      EvKey (KASCII 'c') [MCtrl] -> putMVar mvar ()
+      _                          -> return ()
+    inputReader vty mvar
