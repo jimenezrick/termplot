@@ -12,8 +12,7 @@ import Data.List.Split
 import Graphics.Vty hiding (pad)
 
 {-
- - TODO: Catch read error
- -       CPU chart
+ - TODO: /proc charts (i.e. CPU)
  -       Haskell project structure
  -}
 
@@ -63,8 +62,12 @@ addValChart v (BarChart (n, vs))
 readChartNames :: Handle -> IO [String]
 readChartNames hdl = liftM (splitOn ",") $ hGetLine hdl
 
-readChartVals :: Handle -> IO [Double]
-readChartVals = liftM (map read) . readChartNames
+readChartVals :: Handle -> IO (Either String [Double])
+readChartVals hdl = do
+    s <- hGetLine hdl
+    case reads $ "[" ++ s ++ "]" of
+      [(x, "")] -> return $ Right x
+      _         -> return $ Left "invalid input"
 
 composeChartImg :: BarChart -> Image
 composeChartImg (BarChart (name, vals)) =
@@ -87,41 +90,49 @@ drawChart vty cs = update vty pic
           pic = pic_for_image img
 
 runUi :: Handle -> IO ()
-runUi hdl = bracket mkVty shutdown runUi'
-    where runUi' vty = do
-            mvar <- newEmptyMVar
-            t1 <- forkIO (inputReader vty mvar)
-            t2 <- forkIO (fifoReader mvar hdl)
-            runUi'' vty mvar t1 t2
-          runUi'' vty mvar t1 t2 = do
-            var <- takeMVar mvar
-            case var of
-              Nothing -> do
-                  killThread t1
-                  killThread t2
-                  exitSuccess
-              Just cs -> do
-                  drawChart vty cs
-                  runUi'' vty mvar t1 t2
+runUi hdl = do
+    err <- bracket mkVty shutdown runUi'
+    printError err
+    exitSuccess
+        where runUi' vty = do
+                mvar <- newEmptyMVar
+                t1 <- forkIO (inputReader vty mvar)
+                t2 <- forkIO (fifoReader mvar hdl)
+                runUi'' vty mvar t1 t2
+              runUi'' vty mvar t1 t2 = do
+                var <- takeMVar mvar
+                case var of
+                  Left err -> do
+                      killThread t1
+                      killThread t2
+                      return err
+                  Right cs -> do
+                      drawChart vty cs
+                      runUi'' vty mvar t1 t2
+              printError ""  = return ()
+              printError err = hPutStrLn stdout $ "Error: " ++ err
 
-inputReader :: Vty -> MVar (Maybe a) -> IO ()
+inputReader :: Vty -> MVar (Either String a) -> IO ()
 inputReader vty mvar = do
     ev <- next_event vty
     case ev of
-      EvKey (KASCII 'c') [MCtrl] -> putMVar mvar Nothing
+      EvKey (KASCII 'c') [MCtrl] -> putMVar mvar $ Left ""
       _                          -> inputReader vty mvar
 
-fifoReader :: MVar (Maybe [BarChart]) -> Handle -> IO ()
+fifoReader :: MVar (Either String [BarChart]) -> Handle -> IO ()
 fifoReader mvar hdl =
     let handler :: IOError -> IO ()
-        handler e | isEOFError e = putMVar mvar Nothing
+        handler e | isEOFError e = putMVar mvar $ Left ""
                   | otherwise    = ioError e
     in handle handler $ do
         charts <- fmap (map newBarChart) (readChartNames hdl)
-        putMVar mvar $ Just charts
+        putMVar mvar $ Right charts
         loop charts
             where loop cs = do
                     vs <- readChartVals hdl
-                    let cs' = zipWith addValChart vs cs
-                    putMVar mvar $ Just cs'
-                    loop cs'
+                    case vs of
+                      Left err  -> putMVar mvar $ Left err
+                      Right vs' -> do
+                          let cs' = zipWith addValChart vs' cs
+                          putMVar mvar $ Right cs'
+                          loop cs'
