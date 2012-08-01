@@ -9,6 +9,7 @@ import Control.Monad
 import Control.Exception
 import Control.Concurrent
 import Data.List.Split
+import Data.Either
 import Graphics.Vty hiding (pad)
 
 {-
@@ -24,8 +25,16 @@ main = do
       ["-h"]       -> usage
       ["-f", pipe] -> withFile pipe ReadMode runUi
       _            -> do
-          let seq' = map read $ concatMap (splitOn ",") args :: [Double]
-          putStrLn $ getBars seq'
+          let seqs = map readValSeq args
+          case lefts seqs of
+            []    -> putStrLn . getBars . concat . rights $ seqs
+            err:_ -> printError err
+
+printError :: String -> IO ()
+printError ""  = return ()
+printError err = do
+    hPutStrLn stderr $ "Error: " ++ err
+    exitFailure
 
 usage :: IO ()
 usage = do
@@ -62,12 +71,16 @@ addValChart v (BarChart (n, vs))
 readChartNames :: Handle -> IO [String]
 readChartNames hdl = liftM (splitOn ",") $ hGetLine hdl
 
+readValSeq :: Read a => String -> Either String [a]
+readValSeq s =
+    case reads $ "[" ++ s ++ "]" :: Read a => [(a, String)] of
+      [(x, "")] -> Right x
+      _         -> Left "invalid input"
+
 readChartVals :: Handle -> IO (Either String [Double])
 readChartVals hdl = do
     s <- hGetLine hdl
-    case reads $ "[" ++ s ++ "]" of
-      [(x, "")] -> return $ Right x
-      _         -> return $ Left "invalid input"
+    return $ readValSeq s
 
 composeChartImg :: BarChart -> Image
 composeChartImg (BarChart (name, vals)) =
@@ -109,8 +122,6 @@ runUi hdl = do
                   Right cs -> do
                       drawChart vty cs
                       runUi'' vty mvar t1 t2
-              printError ""  = return ()
-              printError err = hPutStrLn stdout $ "Error: " ++ err
 
 inputReader :: Vty -> MVar (Either String a) -> IO ()
 inputReader vty mvar = do
