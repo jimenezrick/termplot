@@ -1,8 +1,10 @@
 module Main (main) where
 
+import Prelude hiding (catch)
 import System.IO
 import System.Exit
 import System.Environment
+import System.IO.Error hiding (catch)
 import Control.Monad
 import Control.Exception
 import Control.Concurrent
@@ -10,7 +12,7 @@ import Data.List.Split
 import Graphics.Vty hiding (pad)
 
 {-
- - TODO: Catch EOF and read error
+ - TODO: Catch read error
  -       CPU chart
  -       Haskell project structure
  -}
@@ -110,12 +112,16 @@ inputReader vty mvar = do
       _                          -> inputReader vty mvar
 
 fifoReader :: MVar (Maybe [BarChart]) -> Handle -> IO ()
-fifoReader mvar hdl = do
-    charts <- fmap (map newBarChart) (readChartNames hdl)
-    putMVar mvar $ Just charts
-    loop charts
-        where loop cs = do
-                vs <- readChartVals hdl
-                let cs' = zipWith addValChart vs cs
-                putMVar mvar $ Just cs'
-                loop cs'
+fifoReader mvar hdl =
+    let handler :: IOError -> IO ()
+        handler e | isEOFError e = putMVar mvar Nothing
+                  | otherwise    = ioError e
+    in handle handler $ do
+        charts <- fmap (map newBarChart) (readChartNames hdl)
+        putMVar mvar $ Just charts
+        loop charts
+            where loop cs = do
+                    vs <- readChartVals hdl
+                    let cs' = zipWith addValChart vs cs
+                    putMVar mvar $ Just cs'
+                    loop cs'
