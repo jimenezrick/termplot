@@ -1,9 +1,9 @@
-name:          termplot
-version:       0.1
-build-type:    Simple
-cabal-version: >= 1.2
+Name:          termplot
+Version:       0.1
+Build-type:    Simple
+Cabal-version: >= 1.2
 
-executable termplot
-  build-depends:  base, split, vty
-  main-is:        Main.hs
-  hs-source-dirs: src
+Executable termplot
+  Build-depends:  base, split, vty
+  Main-is:        Main.hs
+  Hs-source-dirs: src
