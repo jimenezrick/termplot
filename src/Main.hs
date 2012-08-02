@@ -14,7 +14,6 @@ import Graphics.Vty hiding (pad)
 
 {-
  - TODO: /proc charts (i.e. CPU)
- -       Haskell project structure
  -}
 
 main :: IO ()
