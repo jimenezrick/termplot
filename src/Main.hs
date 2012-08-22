@@ -22,7 +22,7 @@ main = do
     case args of
       []           -> usage
       ["-h"]       -> usage
-      ["-f", pipe] -> withFile pipe ReadMode runUi
+      ["-f", fifo] -> withFile fifo ReadMode runUi
       _            -> do
           let seqs = map readValSeq args
           case lefts seqs of
