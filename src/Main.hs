@@ -14,6 +14,8 @@ import Graphics.Vty hiding (pad)
 
 {-
  - TODO: /proc charts (i.e. CPU)
+ -       DSL for /proc
+ -       Network agent and communication
  -}
 
 main :: IO ()
