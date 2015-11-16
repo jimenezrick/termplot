@@ -1,5 +1,3 @@
-
-
-termplot date:'date +%S' iw:'iw dev wlan0 link | awk "/bitrate/ { print \$3 }"'
+termplot secs:'date +%S' wlan0:'iw dev wlan0 link | awk "/bitrate/ { print \$3 }"'
 
 Inspired by: https://github.com/holman/spark
