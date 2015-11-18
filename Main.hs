@@ -93,8 +93,9 @@ runApp app = do
 
 renderApp :: AppState -> Widget
 renderApp app = seriesNames <+> lastValues <+> (vBox $ map (str . getBars') $ appCmdOuts app)
-  where seriesNames                 = padRight (Pad 1 ) $ vBox (map str (appCmdNames app))
-        lastValues                  = vBox (map (str . showSeries) (appCmdOuts app))
+  where seriesNames                 = pad1 $ vBox (map str (appCmdNames app))
+        lastValues                  = pad1 $ vBox (map (str . showSeries) (appCmdOuts app))
+        pad1                        = padRight $ Pad 1
         showSeries []               = ""
         showSeries s                = show $ head s
         getBars' | appLogScale app  = getBars . logScale
