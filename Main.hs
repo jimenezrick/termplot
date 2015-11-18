@@ -27,7 +27,7 @@ data AppState = AppState {
 
 main :: IO ()
 main = execParser opts >>= runApp
-  where parser = AppState <$> (many $ strArgument (
+  where parser = AppState <$> many (strArgument (
                                     metavar "CMD"
                                  <> help "Command output to plot (<name>:<cmd>)"))
                           <*> pure []
@@ -92,7 +92,7 @@ runApp app = do
                     void $ customMain (mkVty def) ticker termApp (initApp app)
 
 renderApp :: AppState -> Widget
-renderApp app = seriesNames <+> lastValues <+> (vBox $ map (str . getBars') $ appCmdOuts app)
+renderApp app = seriesNames <+> lastValues <+> vBox (map (str . getBars') $ appCmdOuts app)
   where seriesNames                 = pad1 $ vBox (map str (appCmdNames app))
         lastValues                  = pad1 $ vBox (map (str . showSeries) (appCmdOuts app))
         pad1                        = padRight $ Pad 1
@@ -105,7 +105,7 @@ loopApp :: AppState -> AppEvent -> EventM (Next AppState)
 loopApp app (Terminal (EvKey (KChar 'c') [MCtrl])) = halt app
 loopApp app (Terminal (EvKey KEsc _))              = halt app
 loopApp app _                                      = do
-    newOuts <- liftIO $ mapM (uncurry $ runAppCmd maxLen) $ zip (appCmds app) (appCmdOuts app)
+    newOuts <- liftIO $ zipWithM (runAppCmd maxLen) (appCmds app) (appCmdOuts app)
     continue $ app { appCmdOuts = newOuts }
   where maxLen = appSerieSize app
 
@@ -142,7 +142,7 @@ barChars :: String
 barChars = " ▁▂▃▄▅▆▇█"
 
 getBar :: Double -> Double -> Double -> Char
-getBar min' max' n | min' == max' = barChars !! (round $ ((fromIntegral $ length barChars) / 2 :: Double))
+getBar min' max' n | min' == max' = barChars !! round (fromIntegral (length barChars) / 2 :: Double)
                    | otherwise    =
     let len = fromIntegral $ length barChars
         wid = (max' - min') / (len - 1)
