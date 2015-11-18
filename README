@@ -1,11 +1,14 @@
 Usage
 -----
+$ termplot                                         \
+	up1:'uptime | awk "{ print \$8 }"'         \
+	mem:'free | awk "/Mem:/ { print \$3 }"'    \
+	wlan0:'iw dev wlan0 link | awk "/bitrate/ { print \$3 }"'
 
-	termplot                                           \
-		up1:'uptime | "awk { print \$8 }"'         \
-		mem:'free | awk "/Mem:/ { print \$3 }"'    \
-		wlan0:'iw dev wlan0 link | awk "/bitrate/ { print \$3 }"'
+up1   0.0     ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+mem   150464.0▆▇▇██▇▇▇▆▇▇▆▆▆▅▆▆▅▅▅▅▅▇▇▆▅▅▅▄▃▄▂▂
+wlan0 43.3    ▆▆▆▆▆▆▆▆▆▆█▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▄▄ ▄▆▆▄
 
 
-Inspired by: https://github.com/holman/spark
-Powered by the awesome library: hackage.haskell.org/package/brick
++ Inspired by: https://github.com/holman/spark
++ Powered by the awesome library: https://hackage.haskell.org/package/brick
