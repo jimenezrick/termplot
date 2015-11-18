@@ -1,3 +1,11 @@
-termplot secs:'date +%S' wlan0:'iw dev wlan0 link | awk "/bitrate/ { print \$3 }"'
+Usage
+-----
+
+	termplot                                           \
+		up1:'uptime | "awk { print \$8 }"'         \
+		mem:'free | awk "/Mem:/ { print \$3 }"'    \
+		wlan0:'iw dev wlan0 link | awk "/bitrate/ { print \$3 }"'
+
 
 Inspired by: https://github.com/holman/spark
+Powered by the awesome library: hackage.haskell.org/package/brick
