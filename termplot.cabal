@@ -1,14 +1,14 @@
 name:                termplot
 version:             0.1.0.0
-synopsis:            Plot time series in your terminal
+synopsis:            Plot time series in your terminal using commands stdout
 description:         Use unicode characters to plot fancy time series in real-time in your terminal.
 homepage:            https://github.com/jimenezrick/termplot
 license:             MIT
 license-file:        LICENSE
-author:              Ricardo Catalinas Jiménez
-maintainer:          r@untroubled.be
+author:              Ricardo Catalinas Jiménez <r@untroubled.be>
+maintainer:          Ricardo Catalinas Jiménez <r@untroubled.be>
 copyright:           Copyright (c) 2015 Ricardo Catalinas Jiménez
-category:            Graphics
+category:            Console
 build-type:          Simple
 extra-source-files:  README
 cabal-version:       >=1.10
