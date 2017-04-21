@@ -28,8 +28,8 @@ data AppState = AppState {
 main :: IO ()
 main = execParser opts >>= runApp
   where parser = AppState <$> many (strArgument (
-                                    metavar "CMD"
-                                 <> help "Command output to plot (<name>:<cmd>)"))
+                                    metavar "CMDs"
+                                 <> help "Commands to plot output ([<name>:<cmd> ...])"))
                           <*> pure []
                           <*> pure []
                           <*> ((toPosNum <$> strOption (
@@ -142,7 +142,9 @@ barChars :: String
 barChars = " ▁▂▃▄▅▆▇█"
 
 getBar :: Double -> Double -> Double -> Char
-getBar min' max' n | min' == max' = barChars !! round (fromIntegral (length barChars) / 2 :: Double)
+getBar min' max' n | min' == 0
+                   , max' == 0    = head barChars
+                   | min' == max' = barChars !! round (fromIntegral (length barChars) / 2 :: Double)
                    | otherwise    =
     let len = fromIntegral $ length barChars
         wid = (max' - min') / (len - 1)
