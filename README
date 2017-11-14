@@ -1,6 +1,6 @@
 Usage
 -----
-$ termplot                                         \
+$ termplot -i 5s                                   \
 	up1:'uptime | awk "{ print \$8 }"'         \
 	mem:'free | awk "/Mem:/ { print \$3 }"'    \
 	wlan0:'iw dev wlan0 link | awk "/bitrate/ { print \$3 }"'

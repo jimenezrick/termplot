@@ -36,7 +36,7 @@ main = execParser opts >>= runApp
                                     short 'i'
                                  <> long "interval"
                                  <> metavar "INTERVAL"
-                                 <> help "Updates interval time (secs)"))
+                                 <> help "Updates interval time (needs units: 's', 'm', 'h')"))
                               <|> pure 1)
                           <*> switch (
                                     short 'l'
